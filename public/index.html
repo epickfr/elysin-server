@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Elysian Queue</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 30px;
+            background: #0d0d0d;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+        }
+
+        h1 {
+            margin: 0;
+        }
+
+        .header {
+            margin-bottom: 25px;
+        }
+
+        .online {
+            color: #55ff88;
+            margin-top: 6px;
+        }
+
+        #queue {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .job {
+            background: #181818;
+            border: 1px solid #303030;
+            border-radius: 10px;
+            padding: 16px;
+        }
+
+        .job-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .id {
+            color: #6ca8ff;
+            font-weight: bold;
+        }
+
+        .username {
+            color: #ffd166;
+        }
+
+        .position {
+            color: #999;
+        }
+
+        pre {
+            margin: 10px 0 0;
+            padding: 14px;
+            background: #090909;
+            border-radius: 7px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .empty {
+            color: #888;
+            padding: 30px 0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <h1>Elysian Queue</h1>
+
+        <div class="online">
+            ● Server Online
+        </div>
+
+        <p>
+            Queue:
+            <strong id="count">0</strong>
+        </p>
+    </div>
+
+    <div id="queue">
+        <div class="empty">
+            Loading queue...
+        </div>
+    </div>
+
+
+<script>
+
+async function updateQueue() {
+
+    try {
+
+        const response =
+            await fetch("/api/queue");
+
+        const data =
+            await response.json();
+
+        document.getElementById("count").textContent =
+            data.count;
+
+        const queue =
+            document.getElementById("queue");
+
+        queue.innerHTML = "";
+
+
+        if (data.queue.length === 0) {
+
+            queue.innerHTML = `
+                <div class="empty">
+                    Queue is empty.
+                </div>
+            `;
+
+            return;
+        }
+
+
+        data.queue.forEach((job, index) => {
+
+            const element =
+                document.createElement("div");
+
+            element.className = "job";
+
+
+            const header =
+                document.createElement("div");
+
+            header.className = "job-header";
+
+
+            const id =
+                document.createElement("span");
+
+            id.className = "id";
+
+            id.textContent =
+                "ID: " + job.id;
+
+
+            const position =
+                document.createElement("span");
+
+            position.className = "position";
+
+            position.textContent =
+                "Position: " + (index + 1);
+
+
+            header.appendChild(id);
+            header.appendChild(position);
+
+
+            const username =
+                document.createElement("div");
+
+            username.className = "username";
+
+            username.textContent =
+                "Username: " + job.username;
+
+
+            const time =
+                document.createElement("div");
+
+            time.textContent =
+                "Created: " + job.createdAt;
+
+
+            const script =
+                document.createElement("pre");
+
+            script.textContent =
+                job.script;
+
+
+            element.appendChild(header);
+            element.appendChild(username);
+            element.appendChild(time);
+            element.appendChild(script);
+
+            queue.appendChild(element);
+
+        });
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+        document.getElementById("queue").innerHTML = `
+            <div class="empty">
+                Unable to connect to server.
+            </div>
+        `;
+
+    }
+
+}
+
+
+// Update immediately
+updateQueue();
+
+// Update every second
+setInterval(updateQueue, 1000);
+
+</script>
+
+</body>
+</html>
