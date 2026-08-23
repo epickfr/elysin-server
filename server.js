@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 10000;
 // ======================================
 
 app.use(express.json({
-    limit: "256kb"
+    limit: "50mb"
 }));
 
 
@@ -298,6 +298,4 @@ app.listen(
 
     }
 );
-app.use(express.json({
-    limit: "10mb"
-}));
+
