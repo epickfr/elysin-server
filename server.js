@@ -284,6 +284,26 @@ app.get("/api/status", (req, res) => {
 
 
 // ======================================
+// CLEAR ENTIRE QUEUE
+// ======================================
+
+app.post("/api/queue/clear", (req, res) => {
+
+    const removed = queue.length;
+
+    queue.length = 0;
+
+    console.log(`[QUEUE] Cleared ${removed} jobs`);
+
+    res.json({
+        success: true,
+        removed: removed,
+        remaining: queue.length
+    });
+
+});
+
+// ======================================
 // START SERVER
 // ======================================
 
