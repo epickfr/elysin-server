@@ -1,34 +1,33 @@
 const express = require("express");
+const path = require("path");
 
 const app = express();
 
 const PORT = process.env.PORT || 10000;
+
 
 // Allow JSON requests
 app.use(express.json({
     limit: "256kb"
 }));
 
-// In-memory storage
-const submissions = new Map();
+
+// Serve index.html
+app.use(express.static(
+    path.join(__dirname, "public")
+));
 
 
-// ========================================
-// HOME
-// ========================================
+// ======================================
+// QUEUE
+// ======================================
 
-app.get("/", (req, res) => {
-    res.json({
-        success: true,
-        status: "online",
-        service: "Elysian Script Server"
-    });
-});
+const queue = [];
 
 
-// ========================================
-// SUBMIT SCRIPT
-// ========================================
+// ======================================
+// ADD SCRIPT TO QUEUE
+// ======================================
 
 app.post("/api/scripts", (req, res) => {
 
@@ -39,164 +38,169 @@ app.post("/api/scripts", (req, res) => {
     } = req.body;
 
 
-    // ------------------------------------
     // Validate ID
-    // ------------------------------------
+    if (
+        !Number.isInteger(id) ||
+        id < 10000000 ||
+        id > 99999999
+    ) {
 
-    if (!Number.isInteger(id)) {
         return res.status(400).json({
             success: false,
-            error: "id must be an integer"
+            error: "ID must be exactly 8 digits"
         });
-    }
 
-    if (id < 10000000 || id > 99999999) {
-        return res.status(400).json({
-            success: false,
-            error: "id must be exactly 8 digits"
-        });
     }
 
 
-    // ------------------------------------
     // Validate username
-    // ------------------------------------
-
     if (
         typeof username !== "string" ||
-        username.trim().length === 0
+        username.trim() === ""
     ) {
+
         return res.status(400).json({
             success: false,
-            error: "username is required"
+            error: "Username is required"
         });
+
     }
 
 
-    // ------------------------------------
     // Validate script
-    // ------------------------------------
-
     if (
         typeof script !== "string" ||
-        script.length === 0
+        script.trim() === ""
     ) {
+
         return res.status(400).json({
             success: false,
-            error: "script is required"
+            error: "Script is required"
         });
+
     }
 
 
-    // ------------------------------------
-    // Limit username
-    // ------------------------------------
+    // Create queue item
+    const job = {
 
-    if (username.length > 100) {
-        return res.status(400).json({
-            success: false,
-            error: "username is too long"
-        });
-    }
-
-
-    // ------------------------------------
-    // Create submission
-    // ------------------------------------
-
-    const submission = {
         id: id,
+
         username: username,
+
         script: script,
-        receivedAt: new Date().toISOString()
+
+        createdAt:
+            new Date().toISOString()
+
     };
 
 
-    // ------------------------------------
-    // Store submission
-    // ------------------------------------
+    // Put script into queue
+    queue.push(job);
 
-    submissions.set(
-        String(id),
-        submission
-    );
-
-
-    // ------------------------------------
-    // Server console
-    // ------------------------------------
 
     console.log(
-        `[Elysian] Received script`
-    );
-
-    console.log(
-        `ID: ${id}`
-    );
-
-    console.log(
-        `Username: ${username}`
+        `[QUEUE] Added ${id} by ${username}`
     );
 
 
-    // ------------------------------------
-    // Response
-    // ------------------------------------
+    // Tell C# it worked
+    res.status(201).json({
 
-    return res.status(201).json({
         success: true,
+
         id: id,
-        message: "Script received successfully"
+
+        queued: true,
+
+        position: queue.length
+
     });
+
 });
 
 
-// ========================================
-// GET SCRIPT BY ID
-// ========================================
+// ======================================
+// GET QUEUE
+// ======================================
 
-app.get("/api/scripts/:id", (req, res) => {
+app.get("/api/queue", (req, res) => {
 
-    const id = req.params.id;
+    res.json({
 
-    const submission = submissions.get(id);
+        success: true,
+
+        count: queue.length,
+
+        queue: queue
+
+    });
+
+});
 
 
-    if (!submission) {
-        return res.status(404).json({
-            success: false,
-            error: "Submission not found"
+// ======================================
+// GET NEXT QUEUE ITEM
+// ======================================
+
+app.get("/api/queue/next", (req, res) => {
+
+    if (queue.length === 0) {
+
+        return res.json({
+
+            success: true,
+
+            available: false
+
         });
+
     }
 
 
-    return res.json({
+    const job =
+        queue.shift();
+
+
+    console.log(
+        `[QUEUE] Removed ${job.id}`
+    );
+
+
+    res.json({
+
         success: true,
-        submission: submission
+
+        available: true,
+
+        job: job
+
     });
+
 });
 
 
-// ========================================
-// GET ALL SUBMISSIONS
-// ========================================
+// ======================================
+// STATUS
+// ======================================
 
-app.get("/api/scripts", (req, res) => {
+app.get("/api/status", (req, res) => {
 
-    const allSubmissions =
-        Array.from(submissions.values());
+    res.json({
 
-    return res.json({
-        success: true,
-        count: allSubmissions.length,
-        submissions: allSubmissions
+        online: true,
+
+        queueSize: queue.length
+
     });
+
 });
 
 
-// ========================================
-// START SERVER
-// ========================================
+// ======================================
+// START
+// ======================================
 
 app.listen(
     PORT,
@@ -204,7 +208,7 @@ app.listen(
     () => {
 
         console.log(
-            `[Elysian] Server running on port ${PORT}`
+            `Elysian running on port ${PORT}`
         );
 
     }
