@@ -1,0 +1,12 @@
+{
+  "name": "elysian-script-server",
+  "version": "1.0.0",
+  "description": "Elysian script submission server",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}
