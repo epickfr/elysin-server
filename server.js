@@ -6,13 +6,19 @@ const app = express();
 const PORT = process.env.PORT || 10000;
 
 
-// Allow JSON requests
+// ======================================
+// JSON
+// ======================================
+
 app.use(express.json({
     limit: "256kb"
 }));
 
 
-// Serve index.html
+// ======================================
+// INDEX.HTML
+// ======================================
+
 app.use(express.static(
     path.join(__dirname, "public")
 ));
@@ -81,22 +87,16 @@ app.post("/api/scripts", (req, res) => {
     }
 
 
-    // Create queue item
+    // Create job
     const job = {
-
         id: id,
-
         username: username,
-
         script: script,
-
-        createdAt:
-            new Date().toISOString()
-
+        createdAt: new Date().toISOString()
     };
 
 
-    // Put script into queue
+    // Add to queue
     queue.push(job);
 
 
@@ -122,7 +122,7 @@ app.post("/api/scripts", (req, res) => {
 
 
 // ======================================
-// GET QUEUE
+// GET ENTIRE QUEUE
 // ======================================
 
 app.get("/api/queue", (req, res) => {
@@ -143,6 +143,13 @@ app.get("/api/queue", (req, res) => {
 // ======================================
 // GET NEXT QUEUE ITEM
 // ======================================
+//
+// IMPORTANT:
+// This DOES NOT remove the item.
+//
+// Roblox can retrieve it, process it,
+// then call /api/queue/complete.
+// ======================================
 
 app.get("/api/queue/next", (req, res) => {
 
@@ -159,12 +166,11 @@ app.get("/api/queue/next", (req, res) => {
     }
 
 
-    const job =
-        queue.shift();
+    const job = queue[0];
 
 
     console.log(
-        `[QUEUE] Removed ${job.id}`
+        `[QUEUE] Sent job ${job.id}`
     );
 
 
@@ -175,6 +181,85 @@ app.get("/api/queue/next", (req, res) => {
         available: true,
 
         job: job
+
+    });
+
+});
+
+
+// ======================================
+// COMPLETE QUEUE ITEM
+// ======================================
+//
+// Roblox sends:
+//
+// {
+//     "id": 12345678
+// }
+//
+// The server finds that ID and removes
+// ONLY that job.
+// ======================================
+
+app.post("/api/queue/complete", (req, res) => {
+
+    const {
+        id
+    } = req.body;
+
+
+    // Validate ID
+    if (!Number.isInteger(id)) {
+
+        return res.status(400).json({
+
+            success: false,
+
+            error: "Invalid job ID"
+
+        });
+
+    }
+
+
+    // Find job
+    const index = queue.findIndex(
+        job => job.id === id
+    );
+
+
+    // Job doesn't exist
+    if (index === -1) {
+
+        return res.status(404).json({
+
+            success: false,
+
+            error: "Job not found in queue"
+
+        });
+
+    }
+
+
+    // Remove job
+    const removed =
+        queue.splice(index, 1)[0];
+
+
+    console.log(
+        `[QUEUE] Completed ${removed.id} by ${removed.username}`
+    );
+
+
+    // Tell Roblox it worked
+    res.json({
+
+        success: true,
+
+        removed: removed.id,
+
+        remaining: queue.length
 
     });
 
@@ -199,7 +284,7 @@ app.get("/api/status", (req, res) => {
 
 
 // ======================================
-// START
+// START SERVER
 // ======================================
 
 app.listen(
