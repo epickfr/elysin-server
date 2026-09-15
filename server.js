@@ -96,7 +96,7 @@ app.post("/api/scripts", (req, res) => {
     };
 
 
-    // Add to queue
+    // Add job
     queue.push(job);
 
 
@@ -105,7 +105,7 @@ app.post("/api/scripts", (req, res) => {
     );
 
 
-    // Tell C# it worked
+    // Response
     res.status(201).json({
 
         success: true,
@@ -142,13 +142,6 @@ app.get("/api/queue", (req, res) => {
 
 // ======================================
 // GET NEXT QUEUE ITEM
-// ======================================
-//
-// IMPORTANT:
-// This DOES NOT remove the item.
-//
-// Roblox can retrieve it, process it,
-// then call /api/queue/complete.
 // ======================================
 
 app.get("/api/queue/next", (req, res) => {
@@ -190,16 +183,6 @@ app.get("/api/queue/next", (req, res) => {
 // ======================================
 // COMPLETE QUEUE ITEM
 // ======================================
-//
-// Roblox sends:
-//
-// {
-//     "id": 12345678
-// }
-//
-// The server finds that ID and removes
-// ONLY that job.
-// ======================================
 
 app.post("/api/queue/complete", (req, res) => {
 
@@ -228,7 +211,7 @@ app.post("/api/queue/complete", (req, res) => {
     );
 
 
-    // Job doesn't exist
+    // Not found
     if (index === -1) {
 
         return res.status(404).json({
@@ -252,12 +235,43 @@ app.post("/api/queue/complete", (req, res) => {
     );
 
 
-    // Tell Roblox it worked
     res.json({
 
         success: true,
 
         removed: removed.id,
+
+        remaining: queue.length
+
+    });
+
+});
+
+
+// ======================================
+// CLEAR ENTIRE QUEUE
+// ======================================
+
+app.post("/api/queue/clear", (req, res) => {
+
+    const removed =
+        queue.length;
+
+
+    // Remove everything
+    queue.splice(0, queue.length);
+
+
+    console.log(
+        `[QUEUE] Cleared ${removed} jobs`
+    );
+
+
+    res.json({
+
+        success: true,
+
+        removed: removed,
 
         remaining: queue.length
 
@@ -284,26 +298,6 @@ app.get("/api/status", (req, res) => {
 
 
 // ======================================
-// CLEAR ENTIRE QUEUE
-// ======================================
-
-app.post("/api/queue/clear", (req, res) => {
-
-    const removed = queue.length;
-
-    queue.length = 0;
-
-    console.log(`[QUEUE] Cleared ${removed} jobs`);
-
-    res.json({
-        success: true,
-        removed: removed,
-        remaining: queue.length
-    });
-
-});
-
-// ======================================
 // START SERVER
 // ======================================
 
@@ -318,4 +312,3 @@ app.listen(
 
     }
 );
-
